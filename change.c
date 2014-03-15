@@ -11,7 +11,7 @@ struct time_s {
 int cal(unsigned num, struct time_s *t) {
 
     int i, week, day;
-    int sum_day = 0; // 2014-1-1 is fourth day
+    int sum_day = 0; // 2014-1-1 is four day
                          /*1  2    3   4   5   6   7  8   9   10  11  12*/
     static int month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
@@ -41,8 +41,8 @@ int cal(unsigned num, struct time_s *t) {
 
 
     if (sum_day + day > month[i]) {
-        i++;
         sum_day -= month[i];
+        i++;
     }
 
     printf(":::%d:%d:%d\n", i + 1, sum_day + day, month[i]);
