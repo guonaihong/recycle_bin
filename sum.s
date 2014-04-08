@@ -6,7 +6,7 @@ sum:
     mov $-1, %rax
     cmp $0, %rsi
     jl end
-    mov $1, %rax
+    mov $0, %rax
 next:
 
     add (%rdi), %rax
