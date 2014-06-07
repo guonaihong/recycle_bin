@@ -31,6 +31,10 @@ static inline struct stack_node *stack_pop(struct stack_head *h) {
 	return t;
 }
 
+static inline struct stack_node *stack_top(struct stack_head *h) {
+    return h->first;
+}
+
 static inline int stack_empty(struct stack_head *h) {
 	return !h->first;
 }
