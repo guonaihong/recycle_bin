@@ -2,6 +2,7 @@
 #define HO_STACK_H
 
 #include <stdlib.h>
+#undef offsetof
 struct stack_head {
 	struct stack_node *first;
 };
@@ -13,10 +14,7 @@ struct stack_node {
 #define STACK_HEAD_INIT {.first = NULL}
 #define INIT_STACK_HEAD(ptr) ((ptr)->first = NULL)
 
-#ifndef offsetof
 #define offsetof(type, member) ((size_t)&((type *)0)->member)
-#endif
-
 #define stack_entry(ptr, type, member) (type *)((char *)ptr - offsetof(type, member))
 
 static inline void stack_push(struct stack_node *n, struct stack_head *h) {

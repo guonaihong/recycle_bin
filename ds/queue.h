@@ -2,6 +2,7 @@
 #define HO_QUEUE_H
 
 #include <stdlib.h>
+#undef offsetof
 struct queue_head {
     struct queue_node *head;
     struct queue_node *tail;
@@ -16,10 +17,7 @@ struct queue_node {
     (ptr)->head = NULL;(ptr)->tail = NULL; \
 } while (0)
 
-#ifndef offsetof
 #define offsetof(type, member) ((size_t)&((type *)0)->member)
-#endif
-
 #define queue_entry(ptr, type, member) (type *)((char *)ptr - offsetof(type, member))
 
 static inline void queue_put(struct queue_node *n, struct queue_head *h) {
