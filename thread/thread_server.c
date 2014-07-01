@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <stdint.h>
 
 static int tcp_listen(char *ip, char *port);
 
@@ -27,7 +28,25 @@ static void  thread_main(struct thread_pool *pool, int s);
 static void *thread_worker(void *arg);
 /*server code*/
 
+/*read or write socket*/
+static ssize_t writen(int s, const void *buf, size_t count);
+static ssize_t readn(int s, const void *buf, size_t count);
+/*read or write socket*/
+
+/*protocol
+ * function name length:function name
+ * argv of number
+ * first argv
+ * section argv
+ * ....
+ */
+static int proto_code(const char *inbuf, size_t inlen, char outbuf, size_t outlen);
+static int proto_decode(const char *inbuf, size_t inlen, char outbuf, size_t outlen);
+/*protocol*/
+
+/*user function*/
 static void  process_msg(int s);
+/*user function*/
 
 void process_msg(int s) {
 	char buf[128];
@@ -207,4 +226,81 @@ static void thread_main(struct thread_pool *pool, int s) {
 		pthread_cond_signal(&pool->cond);
 		pthread_mutex_unlock(&pool->mutex);
 	}
+}
+
+static ssize_t writen(int s, const void *buf, size_t count) {
+	char *p     = (char *)buf;
+	ssize_t len = count;
+	ssize_t rv  = 0;
+
+	while (len > 0) {
+		rv = write(s, p, len);
+
+		if (rv == -1) {
+			if (errno == EINTR)
+				continue;
+			break;
+		}
+
+		if (rv == 0)
+			return count - len;
+		
+		p   += rv;
+		len -= rv;
+	}
+
+	return count - len;
+}
+
+static ssize_t readn(int s, const void *buf, size_t count) {
+	char     *p  = (char *)buf;
+	ssize_t  len = count;
+	ssize_t  rv  = 0;
+
+	while (len > 0) {
+		rv = read(s, p, len);
+
+		if (rv == -1) {
+			if (errno == EINTR)
+				continue;
+			break;
+		}
+
+		if (rv == 0)
+			return count - len;
+		
+		p   += rv;
+		len -= rv;
+	}
+
+	return count - len;
+}
+
+static int proto_code(char *outbuf, off_t *offset, uint32_t outlen, const char *inbuf, uint32_t inlen) {
+
+	if (outlen < *offset + inlen)
+		return -1;
+
+	outbuf[*offset] = htonl(inlen);/*set data header*/
+	memcpy(outbuf + *offset + 4, inbuf, inlen); /*set data*/
+
+	*offset += inlen + 4;
+	return 0;
+}
+
+static int proto_decode(const char *inbuf, off_t *offset, size_t inlen, char *outbuf, size_t outlen) {
+	int len;
+	if (offset >= inlen)
+		return -1;
+
+	len = *(uint32_t *)inbuf[*offset];
+	len = ntohl(len);
+	if (len > outlen)
+		return -1;
+
+	*offset += 4;/*skip sizeof(uint32_t)*/
+	memcpy(outbuf, inbuf + *offset, len);
+	offset += len;
+
+	return 0;
 }
