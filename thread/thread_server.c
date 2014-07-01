@@ -9,7 +9,7 @@
 
 static int tcp_listen(char *ip, char *port);
 
-#define MAX_THREADS 512
+#define MAX_THREADS 256
 struct thread_pool {
 	pthread_mutex_t mutex;
 	pthread_cond_t  cond;
@@ -21,9 +21,11 @@ struct thread_pool {
 	void (*process)(int s);
 };
 
+/*server code*/
 static int   thread_pool_create(struct thread_pool **pool, int nthreads, void (*process)(int s));
 static void  thread_main(struct thread_pool *pool, int s);
 static void *thread_worker(void *arg);
+/*server code*/
 
 static void  process_msg(int s);
 
@@ -35,29 +37,51 @@ void process_msg(int s) {
 	close(s);
 }
 
+static void usage(void) {
+	fprintf(
+			stderr, 
+			"Usage: \r\n"
+			"-p <port> <must exist>\r\n"
+			"-i <ip>   \r\n"
+			"-n <number of threads:default %d>\r\n"
+			"-h help \r\n"
+			,MAX_THREADS
+		   );
+}
+
 int main(int argc, char **argv) {
 
     int s;
 	int nthread = -1;
+	char *ip, *port;
+	char c;
 
-    if (argc == 2) {
-		s = tcp_listen(NULL, argv[1]);
-	} else if (argc == 3 || argc == 4) {
-		s = tcp_listen(argv[1], argv[2]);
-		nthread = atoi(argv[3]);
-	} else {
-		fprintf(
-				stderr, 
-				"Usage: \r\n"
-				"%s <port> \r\n"
-				"%s <ip> <port> \r\n"
-				"%s <ip> <port> <number of threads:default %d>\r\n"
-				,argv[0]
-				,argv[0]
-				,argv[0], MAX_THREADS
-			   );
+	ip = port = NULL;
+
+	while ((c = getopt(argc, argv, "p:i:n:h")) != -1) {
+		switch(c) {
+			case 'p':
+				port = optarg;
+				break;
+			case 'i':
+				ip   = optarg;
+				break;
+			case 'n':
+				nthread = atoi(optarg);
+				break;
+			case 'h':
+				usage();
+				break;
+		}
+	}
+	if (port == NULL) {
+		usage();
 		return 1;
 	}
+
+	s = tcp_listen(ip, port);
+	if (s == -1)
+		return 1;
 
 	struct thread_pool *pool;
 
@@ -87,7 +111,7 @@ static int tcp_listen(char *ip, char *port) {
     memset(&server, 0, sizeof(server));
     server.sin_family = AF_INET;
     server.sin_port   = htons(atoi(port));
-    server.sin_addr.s_addr = ip ? htonl(atoi(ip)) : htonl(INADDR_ANY);
+    server.sin_addr.s_addr = ip ? inet_addr(ip) : htonl(INADDR_ANY);
 
     int on = 1;
     if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on))) {
@@ -171,6 +195,7 @@ static void thread_main(struct thread_pool *pool, int s) {
 		/*get client sock*/
 		connfd = accept(s, NULL, NULL);
 		fprintf(stderr, "current sock = %d\n", connfd);
+
 		if (connfd == -1) {
 			perror("accept");
 			break;
