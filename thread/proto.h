@@ -144,5 +144,44 @@ inline static ssize_t readn(int s, const void *buf, size_t count) {
 
     return count - len;
 }
+
+inline static ssize_t readvrec(int s, char **p, int *use, int *n) {
+    uint32_t headlen;
+    ssize_t  rv;
+    int      needed = 0;
+    char     *newp  = NULL;
+
+    if (*p == NULL || *n == 0) {
+        *n = needed = 500;
+        *p = malloc(needed);
+        if (*p == NULL)
+            return -1;
+    }
+
+    rv = readn(s, &headlen, sizeof(uint32_t));
+    if (rv != sizeof(uint32_t))
+        return rv < 0 ? -1 : 0;
+
+    headlen = htonl(headlen);
+
+    if (headlen > *n) {
+
+        needed = headlen;
+        if (headlen < 2 * *n)
+            needed = 2 * *n;
+
+        newp = realloc(*p, needed);
+        if (newp == NULL)
+            return -1;
+        *p = newp;
+        *n = needed;
+    }
+
+    rv = readn(s, *p, headlen);
+    if (rv != headlen)
+        return rv < 0 ? -1 :0;
+
+    return rv;
+}
 //#undef swap64
 #endif
