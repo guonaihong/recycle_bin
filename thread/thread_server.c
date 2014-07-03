@@ -7,8 +7,9 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <stdint.h>
-#include "thread_server.h"
 
+#include "proto.h"
+#include "user.h"
 static int tcp_listen(char *ip, char *port);
 
 #define MAX_THREADS 256
@@ -29,23 +30,6 @@ static void  thread_main(struct thread_pool *pool, int s);
 static void *thread_worker(void *arg);
 /*server code*/
 
-/*read or write socket*/
-static ssize_t writen(int s, const void *buf, size_t count);
-static ssize_t readn(int s, const void *buf, size_t count);
-/*read or write socket*/
-
-/*user function*/
-static void  process_msg(int s);
-/*user function*/
-
-void process_msg(int s) {
-    char buf[128];
-    int r;
-    r = read(s, buf, sizeof(buf));
-    write(1, buf, r);
-    close(s);
-}
-
 static void usage(void) {
     fprintf(
             stderr, 
@@ -58,6 +42,7 @@ static void usage(void) {
            );
 }
 
+#if SERVER
 int main(int argc, char **argv) {
 
     int s;
@@ -101,6 +86,7 @@ int main(int argc, char **argv) {
 
     return 0;
 }
+#endif
 
 static int tcp_listen(char *ip, char *port) {
     struct sockaddr_in server;
@@ -211,86 +197,12 @@ static void thread_main(struct thread_pool *pool, int s) {
         }
 
         pthread_mutex_lock(&pool->mutex);
+
         pool->connfd = connfd;
         pool->ready  = 1;
         pthread_cond_signal(&pool->cond);
+
         pthread_mutex_unlock(&pool->mutex);
     }
 }
 
-static ssize_t writen(int s, const void *buf, size_t count) {
-    char *p     = (char *)buf;
-    ssize_t len = count;
-    ssize_t rv  = 0;
-
-    while (len > 0) {
-        rv = write(s, p, len);
-
-        if (rv == -1) {
-            if (errno == EINTR)
-                continue;
-            break;
-        }
-
-        if (rv == 0)
-            return count - len;
-
-        p   += rv;
-        len -= rv;
-    }
-
-    return count - len;
-}
-
-static ssize_t readn(int s, const void *buf, size_t count) {
-    char     *p  = (char *)buf;
-    ssize_t  len = count;
-    ssize_t  rv  = 0;
-
-    while (len > 0) {
-        rv = read(s, p, len);
-
-        if (rv == -1) {
-            if (errno == EINTR)
-                continue;
-            break;
-        }
-
-        if (rv == 0)
-            return count - len;
-
-        p   += rv;
-        len -= rv;
-    }
-
-    return count - len;
-}
-
-int proto_code(char *outbuf, off_t *offset, uint32_t outlen, const char *inbuf, uint32_t inlen) {
-
-    if (outlen < *offset + inlen)
-        return -1;
-
-    outbuf[*offset] = htonl(inlen);/*set data header*/
-    memcpy(outbuf + *offset + 4, inbuf, inlen); /*set data*/
-
-    *offset += inlen + 4;
-    return 0;
-}
-
-int proto_decode(const char *inbuf, off_t *offset, size_t inlen, char *outbuf, size_t outlen) {
-    uint32_t len;
-    if (*offset >= inlen)
-        return -1;
-
-    len = *(uint32_t *)(inbuf+*offset);
-    len = ntohl(len);
-    if (len > outlen)
-        return -1;
-
-    *offset += 4;/*skip sizeof(uint32_t)*/
-    memcpy(outbuf, inbuf + *offset, len);
-    offset += len;
-
-    return 0;
-}
