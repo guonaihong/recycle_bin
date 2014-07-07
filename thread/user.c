@@ -11,11 +11,13 @@ static void debug_print(FILE *fp, ...) {
 #define CMP(p, s) strncmp(p, s, sizeof(s) - 1)
 #define SKIP_FUN(p) (4 + ntohl(*(uint32_t *)(p)))
 
+#if 0
 typedef struct buf_s {
     char *str;
     int  use;
-    it   n;
+    int   n;
 } buf_t;
+#endif
 
 void process_msg(int s) {
     char *p;
@@ -37,7 +39,7 @@ void process_msg(int s) {
          * arg2
          * arg3
          * ....
-         * data type
+         * data type(function name,arg1, arg2, arg3 ...)
          * |--data len---|--data---|
          */
         rv = readvrec(s, &p, &n);
@@ -46,16 +48,11 @@ void process_msg(int s) {
         }
         printf(" readvrec rv = %d---\n", rv);
 
-#if 0
-        len = ntohl(*(uint32_t *)p);//function name length
-        narg1 = ntohl(*(uint32_t *)(p + 4 + len));
-#endif
-
         offset = SKIP_FUN(p);
         if (!CMP(p + 4, "usc_mrcp_asr_init")) {
             POP_BUF(p, offset, n, argbuf, narg1);
 
-#if 0
+#if 1
             printf(":::::::::$%s$narg1 = %d\n", argbuf, narg1);
             write(1, argbuf, narg1);
 #endif

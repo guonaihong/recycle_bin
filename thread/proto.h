@@ -98,8 +98,9 @@ inline static int proto_encode_int(char *outbuf, off_t *offset, uint32_t outlen,
 #define PUSH_INT(buf, offset, data, len)  \
     proto_encode_int(buf + 4, &offset, sizeof(buf), (char *)&data, len);
 
-#define POP_BUF(buf, offset,n, p, len)  do {  \
-    p = malloc(len);                        \
+#define POP_BUF(buf, offset,n, p, len)  do {     \
+    len = ntohl(*(uint32_t *)(buf + offset));                 \
+    p = malloc(len);                             \
     proto_decode(buf, (off_t *)&offset, n, p, len);     \
 } while (0)
 
