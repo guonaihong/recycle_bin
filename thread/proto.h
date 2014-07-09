@@ -34,19 +34,19 @@ static inline int proto_encode(char *outbuf, off_t *offset, uint32_t outlen, con
     return 0;
 }
 
-static inline int proto_decode(const char *inbuf, off_t *offset, size_t inlen, char *outbuf, size_t outlen) {
+static inline int proto_decode(const char *inbuf, uint32_t *offset, size_t inlen, char *outbuf, size_t outlen) {
     uint32_t len;
-    if (*offset >= inlen)
+    if (*offset >= (uint32_t)inlen)
         return -1;
 
-    len = *(uint32_t *)(inbuf + *offset);
-    len = ntohl(len);
-    if (len > outlen)
+    len = ntohl(*(uint32_t *)(inbuf + *offset));
+    printf("1....%s:len = %d: offset = %d\n", __func__, len, *offset);
+    if (len > (uint32_t)outlen)
         return -1;
 
     *offset += 4;/*skip sizeof(uint32_t)*/
     memcpy(outbuf, inbuf + *offset, len);
-    offset += len;
+    *offset += len;
 
     return 0;
 }
@@ -76,7 +76,7 @@ inline static int proto_encode_int(char *outbuf, off_t *offset, uint32_t outlen,
         return proto_encode(outbuf, offset, outlen, (char *)&u32, 4);
     }
     else if (inlen == 8) {
-        uint32_t u64 = hton64(*(uint64_t *)inbuf);
+        uint64_t u64 = hton64(*(uint64_t *)inbuf);
         return proto_encode(outbuf, offset, outlen, (char *)&u64, 8);
     }
 
@@ -99,13 +99,22 @@ inline static int proto_encode_int(char *outbuf, off_t *offset, uint32_t outlen,
     proto_encode_int(buf + 4, &offset, sizeof(buf), (char *)&data, len);
 
 #define POP_BUF(buf, offset,n, p, len)  do {     \
-    len = ntohl(*(uint32_t *)(buf + offset));                 \
-    p = malloc(len);                             \
-    proto_decode(buf, (off_t *)&offset, n, p, len);     \
+    len = ntohl(*(uint32_t *)(buf + offset));    \
+    p = malloc(len + 1);                         \
+    p[len] = '\0';                               \
+    proto_decode(buf, &offset, n, p, len);       \
 } while (0)
 
-#define POP_INT(buf, offset, i, len)  \
-    proto_encode(buf, &offset, &i, len)
+#define POP_INT(buf, offset, n, i, len)  do {   \
+    proto_decode(buf, &offset, n, (char *)&i, len); \
+    if ((int)len == 2) {                             \
+        i = ntohs(i);                           \
+    } else if ((int)len == 4) {                      \
+        i = ntohl(i);                           \
+    } else if ((int)len == 8) {                      \
+        i = ntoh64(i);                          \
+    }                                           \
+} while (0)
 
 inline static ssize_t writen(int s, const void *buf, size_t count) {
     char    *p  = (char *)buf;

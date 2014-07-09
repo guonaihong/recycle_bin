@@ -64,10 +64,11 @@ int usc_mrcp_asr_destroy(HANDLE_MRCPINTF asr)
     char buf[48];
     off_t offset = 0;
     PUSH_FUN(buf, offset);
-    PUSH_INT(buf, offset, asr, sizeof(asr)); /*asr*/
     PUSH_HEAD(buf, offset);
 
+    writen(asr, buf, offset + 4);
     /*read data*/
+    close(asr);
     return 0;
 }
 
@@ -75,9 +76,9 @@ int usc_mrcp_service_init(HANDLE_MRCPINTF* Handle, HANDLE_MRCPINTF asr, void* ob
     char buf[48];
     off_t offset = 0;
     PUSH_FUN(buf, offset);
-    PUSH_INT(buf, offset, asr, sizeof(asr)); /*asr*/
     PUSH_HEAD(buf, offset);
 
+    writen(asr, buf, offset + 4);
     /*read data*/
 }
 
@@ -140,6 +141,7 @@ int main(int argc, char **argv) {
     port = argv[1];
 
     usc_mrcp_asr_init(&s, "1111111", 5);
+    usc_mrcp_asr_destroy(s);
     return 0;
 }
 #endif

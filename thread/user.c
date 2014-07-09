@@ -1,4 +1,5 @@
 #include "proto.h"
+#include "libusc_mrcp.h"
 static write_err(int s, char *msg) {
     ;
 }
@@ -21,14 +22,15 @@ typedef struct buf_s {
 
 void process_msg(int s) {
     char *p;
-    int  use, n, rv;
+    int  use, rv;
     int  len;
 
+    int n = 0;
+
     p = NULL;
-    n = 0;
 
     uint32_t narg1, narg2, narg3;
-    int offset;
+    uint32_t offset;
     char *argbuf = NULL;
 
     for (;;) {
@@ -49,18 +51,19 @@ void process_msg(int s) {
         printf(" readvrec rv = %d---\n", rv);
 
         offset = SKIP_FUN(p);
-        if (!CMP(p + 4, "usc_mrcp_asr_init")) {
-            POP_BUF(p, offset, n, argbuf, narg1);
 
-#if 1
-            printf(":::::::::$%s$narg1 = %d\n", argbuf, narg1);
-            write(1, argbuf, narg1);
-#endif
+        printf(" offset = %d\n", offset);
+        if (!CMP(p + 4, "usc_mrcp_asr_init")) {
+            unsigned int arg = 0;
+            POP_BUF(p, offset, n, argbuf, narg1);
+            POP_INT(p, offset, n, arg, sizeof(unsigned int));
+
+            printf("%s:%ld\n", argbuf, arg);
 
             free(argbuf);
             argbuf = NULL;
         } else if (!CMP(p + 4, "usc_mrcp_asr_destroy")) {
-            ;
+            printf("usc_mrcp_asr_destroy");
         } else if (!CMP(p + 4, "usc_mrcp_service_init")) {
             ;
         } else if (!CMP(p + 4, "usc_mrcp_service_start")) {
@@ -80,4 +83,6 @@ failed:
     free(p);
     free(argbuf);
     close(s);
+    
+    printf("Bye Bye\n");
 }
