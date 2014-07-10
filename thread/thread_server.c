@@ -128,13 +128,13 @@ static int tcp_listen(char *ip, char *port) {
     return s;
 }
 
-static int thread_pool_create(struct thread_pool **pool, int nthreads, void (*process)(int s)) {
+static int   thread_pool_create(struct thread_pool **pool, int nthreads, void (*process)(int s)) {
     int i, r;
 
     struct thread_pool *p = NULL;
     p = calloc(1, sizeof(struct thread_pool));
     if (!p)
-        goto failed;
+        goto failed0;
 
     if ((r = pthread_mutex_init(&p->mutex, NULL)) != 0)
         goto failed;
@@ -154,11 +154,13 @@ static int thread_pool_create(struct thread_pool **pool, int nthreads, void (*pr
     return 0;
 
 failed:
-    fprintf(stderr, "error:%s:%s\n", strerror(r), strerror(errno));
 
     pthread_mutex_destroy(&p->mutex);
     pthread_cond_destroy(&p->cond);
     free(p);
+
+failed0:
+    fprintf(stderr, "error:%s:%s\n", strerror(r), strerror(errno));
     return -1;
 }
 
