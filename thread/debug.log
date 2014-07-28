@@ -1,0 +1,3 @@
+producers time: 591532:sock = 5
+producers time: 591602:sock = 6
+consumers time: 591629:sock = 6

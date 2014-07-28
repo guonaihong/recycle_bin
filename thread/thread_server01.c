@@ -12,17 +12,22 @@
 #include "user.h"
 static int tcp_listen(char *ip, char *port);
 
-#define MAX_THREADS 128
+#define MAX_THREADS 4
 struct thread_pool {
     pthread_mutex_t mutex;
+    pthread_cond_t  cond;
+    pthread_cond_t  main_cond;
 
     pthread_t       tids[MAX_THREADS];
-    int             s;
+    int             connfd;
+    int             ready;
+
     void (*process)(int s);
 };
 
 /*server code*/
-static int   thread_pool_create(struct thread_pool **pool, int nthreads, void (*process)(int s), int s);
+static int   thread_pool_create(struct thread_pool **pool, int nthreads, void (*process)(int s));
+static void  thread_main(struct thread_pool *pool, int s);
 static void *thread_worker(void *arg);
 /*server code*/
 
@@ -36,6 +41,11 @@ static void usage(void) {
             "-h help \r\n"
             ,MAX_THREADS
            );
+}
+
+void process_msg(int s) {
+    printf("s = %d\n", s);
+    close(s);
 }
 
 #if SERVER
@@ -75,9 +85,9 @@ int main(int argc, char **argv) {
 
     struct thread_pool *pool;
 
-    int r = thread_pool_create(&pool, nthread, process_msg, s);
+    int r = thread_pool_create(&pool, nthread, process_msg);
     printf("thread pool create = %d\n", r);
-    pause();
+    thread_main(pool, s);
     close(s);
 
     return 0;
@@ -124,7 +134,7 @@ static int tcp_listen(char *ip, char *port) {
     return s;
 }
 
-static int   thread_pool_create(struct thread_pool **pool, int nthreads, void (*process)(int s), int s) {
+static int   thread_pool_create(struct thread_pool **pool, int nthreads, void (*process)(int s)) {
     int i, r;
 
     struct thread_pool *p = NULL;
@@ -135,21 +145,27 @@ static int   thread_pool_create(struct thread_pool **pool, int nthreads, void (*
     if ((r = pthread_mutex_init(&p->mutex, NULL)) != 0)
         goto failed;
 
-    if (nthreads <= 0 || nthreads > MAX_THREADS)
+    if ((r = pthread_cond_init(&p->cond, NULL)) != 0)
+        goto failed;
+
+    if ((r = pthread_cond_init(&p->main_cond, NULL)) != 0)
+        goto failed;
+
+    if (nthreads <= 0)
         nthreads = MAX_THREADS;
 
-    p->s       = s;
-    p->process = process;
     for (i = 0; i < nthreads; i++) {
         r = pthread_create(&p->tids[i], NULL, thread_worker, p);
     }
-    *pool = p;
 
+    p->process = process;
+    *pool = p;
     return 0;
 
 failed:
 
     pthread_mutex_destroy(&p->mutex);
+    pthread_cond_destroy(&p->cond);
     free(p);
 
 failed0:
@@ -164,12 +180,46 @@ static void *thread_worker(void *arg) {
     int connfd = -1;
     for (;;) {
         pthread_mutex_lock(&p->mutex);
-        connfd = accept(p->s, NULL, NULL);
-        fprintf(stderr, "---current socket %d \n", connfd);
+
+        while (p->ready == 0) {
+            pthread_cond_wait(&p->cond, &p->mutex);
+        }
+        connfd   = p->connfd;
+        p->ready = 0;
+
+        pthread_cond_signal(&p->main_cond);
+
         pthread_mutex_unlock(&p->mutex);
 
-        fprintf(stderr, "call user function \n");
         p->process(connfd);
     }
     return (void *)0;
 }
+
+static void thread_main(struct thread_pool *pool, int s) {
+    int connfd;
+
+    for (;;) {
+        /*get client sock*/
+        connfd = accept(s, NULL, NULL);
+        fprintf(stderr, "current sock = %d\n", connfd);
+
+        if (connfd == -1) {
+            perror("accept");
+            break;
+        }
+
+        pthread_mutex_lock(&pool->mutex);
+
+        while (pool->ready == 1) {
+            pthread_cond_wait(&pool->main_cond, &pool->mutex);
+        }
+
+        pool->connfd = connfd;
+        pool->ready  = 1;
+        pthread_cond_signal(&pool->cond);
+
+        pthread_mutex_unlock(&pool->mutex);
+    }
+}
+

@@ -40,7 +40,7 @@ static inline int proto_decode(const char *inbuf, uint32_t *offset, size_t inlen
         return -1;
 
     len = ntohl(*(uint32_t *)(inbuf + *offset));
-    printf("1....%s:len = %d: offset = %d\n", __func__, len, *offset);
+    //printf("1....%s:len = %d: offset = %d\n", __func__, len, *offset);
     if (len > (uint32_t)outlen)
         return -1;
 
@@ -49,6 +49,10 @@ static inline int proto_decode(const char *inbuf, uint32_t *offset, size_t inlen
     *offset += len;
 
     return 0;
+}
+
+static inline void proto_add_head(char *buf, size_t n) {
+    *(uint32_t *)buf = ntohl(n);
 }
 /*protocol*/
 
@@ -83,20 +87,20 @@ inline static int proto_encode_int(char *outbuf, off_t *offset, uint32_t outlen,
     return proto_encode(outbuf, offset, outlen, inbuf, inlen);
 }
 
-#define PUSH_FUN(buf, offset) \
-    proto_encode(buf + 4, &offset, sizeof(buf), __func__, strlen(__func__))
+#define PUSH_FUN(buf, offset, n) \
+    proto_encode(buf + 4, &offset, n, __func__, strlen(__func__))
 
-#define PUSH_STR(buf, offset, str) \
-    proto_encode(buf + 4, &offset, sizeof(buf), str, strlen(str));
+#define PUSH_STR(buf, offset, n, str) \
+    proto_encode(buf + 4, &offset, n, str, strlen(str));
 
-#define PUSH_HEAD(buf, offset)    \
-    proto_encode(buf, NULL, sizeof(buf), (char *)&offset, sizeof(uint32_t));
+#define PUSH_HEAD(buf, offset, n)    \
+    proto_encode(buf, NULL, n, (char *)&offset, sizeof(uint32_t));
 
-#define PUSH_BUF(buf, offset, inbuf, inlen) \
-    proto_encode(buf + 4, &offset, sizeof(buf), inbuf, inlen);
+#define PUSH_BUF(buf, offset, n, inbuf, inlen) \
+    proto_encode(buf + 4, &offset, n, inbuf, inlen);
 
-#define PUSH_INT(buf, offset, data, len)  \
-    proto_encode_int(buf + 4, &offset, sizeof(buf), (char *)&data, len);
+#define PUSH_INT(buf, offset, n, data, len)  \
+    proto_encode_int(buf + 4, &offset, n, (char *)&data, len);
 
 #define POP_BUF(buf, offset,n, p, len)  do {     \
     len = ntohl(*(uint32_t *)(buf + offset));    \
@@ -115,6 +119,7 @@ inline static int proto_encode_int(char *outbuf, off_t *offset, uint32_t outlen,
         i = ntoh64(i);                          \
     }                                           \
 } while (0)
+
 
 inline static ssize_t writen(int s, const void *buf, size_t count) {
     char    *p  = (char *)buf;
@@ -203,4 +208,34 @@ inline static ssize_t readvrec(int s, char **p, int *n) {
 
     return rv;
 }
+
+inline static ssize_t readvrec1(int s, char *p, int n) {
+    uint32_t headlen;
+    ssize_t  rv;
+
+    rv = readn(s, &headlen, sizeof(uint32_t));
+    if (rv != sizeof(uint32_t))
+        return rv < 0 ? -1 : 0;
+
+    headlen = htonl(headlen);
+
+    if (headlen > n) {
+        headlen = n;
+    }
+
+    rv = readn(s, p, headlen);
+
+    if (rv != headlen)
+        return rv < 0 ? -1 :0;
+
+    return rv;
+}
+
+inline static void send_rv(int s, int32_t rv) {
+    uint64_t buf;
+    *(uint32_t *)&buf = htonl(4);//data head
+    *((uint32_t *)&buf + 1) = htonl(rv);//data
+    writen(s, &buf, 8);
+}
+
 #endif
