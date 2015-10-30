@@ -1,0 +1,11 @@
+#131114
+    struct queue_head *q;
+    struct queue_head *q1;
+
+    q = queue_new();
+    q1 = queue_new();
+    queue_put(strdup("123"), q);
+    queue_join_init(q, q1);
+
+result:
+    queue_join_init function core dump
