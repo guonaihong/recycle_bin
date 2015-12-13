@@ -1,0 +1,206 @@
+#sytem call name
+open
+creat
+read
+write
+close
+lseek
+ioctl
+fcntl
+stat
+fstat
+lstat
+fstatat
+dup
+dup2
+dup3 #linux
+link
+unlink
+pread
+pwrite
+readv
+writev
+unlinkat
+symlink
+rename
+rmdir
+mount
+unmount
+reboot
+truncate
+ftruncate
+getuid
+getgid
+getpid
+geteuid
+getegid
+getppid
+getpgid
+getpgrp
+setpgid
+setpgrp
+setuid
+setgid
+seteuid
+setegid
+setreuid
+setregid
+getsid
+setsid
+getresuid #linux
+getresgid #linux
+setresuid #linux
+setresgid #linux
+setfsuid
+setfsgid
+getgroups
+setgroups
+initgroups
+mmap
+mmap64 #linux
+munmap
+brk
+sbrk
+gettimeofday
+settimeofday
+adjtime
+times
+utime
+utimes
+sysconf
+pathconf
+fpathconf
+uname
+fsync
+sync
+fdatasync     #mac does not have this function
+posix_fadvise #mac does not have this function
+utimensat     #mac does not have this function
+statvfs
+fstatvfs
+chown
+fchown
+lchown
+fchownat
+access
+umask
+chmod
+fchmod
+fchmodat
+readlink
+symlink
+mkdir
+getdents svr4
+getdirentries
+fchdir
+chdir
+getcwd linux
+openat
+chroot bsd
+inotify_init       #linux proprietary system calls
+inotify_init1      #linux proprietary system calls
+inotify_add_watch  #linux proprietary system calls
+inotify_rm_watch   #linux proprietary system calls
+kill
+killpg #bsd
+sigprocmask
+sigpending
+sigaction
+pause
+sigaltstack
+getcontext  #linux
+setcontext  #linux
+makecontext #linux
+swapcontext #linux
+sigsuspend
+signalfd #linux proprietary system calls
+setitimer
+getitimer
+alarm #bsd
+nanosleep
+clock_gettime   #mac does not have this function
+clock_getres    #mac does not have this function
+clock_settime   #mac does not have this function
+clock_nanosleep #linux proprietary system calls
+timerfd_create  #linux proprietary system calls
+timerfd_settime #linux proprietary system calls
+timerfd_gettime #linux proprietary system calls
+fork   #bsd
+_exit
+vfork  #bsd
+wait   #bsd
+waitid #
+execve
+acct
+clone #linux proprietary system calls
+getpriority #bsd
+setpriority #bsd
+sched_getaffinity  #mac does not have this function
+sched_getparam     #mac does not have this function
+sched_getscheduler #mac does not have this function
+sched_setaffinity  #mac does not have this function
+sched_setparam     #mac does not have this function
+sched_setscheduler #mac does not have this function
+sched              #mac does not have this function
+sched_get_priority_max #mac does not have this function
+sched_get_priority_min #mac does not have this function
+sched_yield #mac does not have this function
+sched_rr_get_interval
+getrusage
+getrlimit #bsd
+setrlimit #bsd
+pipe
+mkfifo  #bsd
+msgget #mac does not have this function
+msgrcv #mac does not have this function
+msgsnd #mac does not have this function
+msgctl #mac does not have this function
+semget
+semctl
+semop
+shmget
+shmat
+shmdt
+msync
+mprotect
+mlock
+munlock
+mlockall
+munlockall
+mincore
+madvise
+posix_madvise
+sem_open #bsd
+sem_close #bsd
+sem_unlink #bsd
+sem_post #bsd
+sem_wait #bsd
+sem_trywait #bsd
+shm_open #bsd
+shm_unlink #bsd
+flock
+socket
+bind
+listen
+accept
+connect
+recvfrom
+recvmsg
+recv
+send
+sendto
+sendmsg
+socketpair
+shutdown
+sendfile
+getsockname
+getpeername
+getsockopt
+setsockopt
+select
+poll
+epoll_create #linux
+epoll_create1 #linux
+epoll_ctl #linux
+epoll_wait #linux
+epoll #linux

@@ -1,0 +1,175 @@
+perror
+strerror
+remove
+fopen
+getopt
+mkstemp
+tmpfile
+getenv
+putenv
+setenv
+unsetenv
+setjmp
+longjmp
+malloc
+free
+mtrace  gnulibc
+muntrace gnulibc
+calloc
+realloc
+memalign gnulibc
+posix_memalign
+alloca
+getpwnam
+getpwuid
+getgrnam
+getgrgid
+getspnam #mac does not have this function
+getspent #mac does not have this function
+setpwent
+endpwent
+crypt
+getpass
+time
+ctime
+gmtime
+gmtime_r
+localtime
+mktime
+asctime
+asctime_r
+strptime
+strftime
+setlocale
+stime linux
+clock
+setbuf
+setvbuf
+setbuffer
+fflush
+fileno
+fdopen
+futimes
+futimens #linux
+opendir
+readdir
+readdir_r
+rewinddir
+closedir
+dirfd
+nftw
+getcwd
+chroot linux
+realpath
+dirname
+basename
+raise
+strsignal
+psignal
+sigemptyset
+sigfillset
+sigaddset
+sigdelset
+sigismember
+sigsetjmp 
+siglongjmp 
+getcontext  #bsd
+setcontext  #bsd
+makecontext #bsd
+swapcontext #bsd
+abort
+sigqueue #linux
+sigwaitinfo  #glibc
+sigtimedwait #glibc
+alarm #bsd
+sleep
+usleep
+clock_getcpuclockid #mac does not have this function
+timer_create    #mac does not have this function
+timer_settime   #mac does not have this function
+timer_delete   #mac does not have this function
+timer_getoverrun #mac does not have this function
+fork  #linux  call clone
+vfork #linux call clone
+exit
+wait #linux call wait4
+exec
+execl
+execle
+execlp
+execv
+execvp
+system
+ctermid
+tcgetpgrp
+tcsetpgrp
+CPU_ZERO
+CPU_SET
+CPU_CLR
+CPU_ISSET
+getrlimit #linux
+setrlimit #linux
+openlog
+syslog
+closelog
+vsyslog
+setlogmask
+endutxent
+getutxent
+getutxid
+getutxline
+pututxline
+setutxent
+utmpxname
+getlastlogx       #mac
+getlastlogxbyname #mac
+getutmp
+getutmpx
+gesetgin
+setlogin
+updwtmpx #mac does not have this function
+popen
+pclose
+ftok
+mq_open
+mq_close
+mq_unlink
+mq_send
+mq_receive
+mq_setattr
+mq_getattr
+mq_notify
+sem_getvalue
+sem_init
+inet_pton
+inet_ntop
+inet_aton
+inet_ntoa
+sem_destroy
+gethostbyname
+gethostbyname2
+gethostbyaddr
+gethostent
+sethostent
+endhostent
+herror
+hstrerror
+getaddrinfo
+freeaddrinfo
+gai_strerror
+getnameinfo
+cfgetispeed
+cfgetospeed
+cfmakeraw
+cfsetispeed
+cfsetospeed
+cfsetspeed
+tcgetattr
+tcsetattr
+tcdrain
+tcflow
+tcflush
+tcsendbreak
+isatty
+ttyname
+ttyslot

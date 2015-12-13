@@ -1,0 +1,7 @@
+#install
+#You need root privileges
+cp find_func.pl lib_tab sys_tab /usr/bin/
+
+# demo
+# Check the current project how many system calls
+find ~/recycle_bin/ -exec find_func.pl {} \;|sort -u |grep 'system call'
