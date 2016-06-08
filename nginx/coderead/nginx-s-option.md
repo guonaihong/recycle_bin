@@ -64,3 +64,85 @@ static ngx_int_t ngx_get_options(int argc, char *const *argv) {
 }
 // 跑完这个函数,只设置了两个变量ngx_signal和ngx_process
 ```
+
+只要找到ngx_signal表量就知道实际干活的函数
+```c
+    //如果ngx_signal有值，则调用ngx_signal_process
+    if (ngx_signal) {
+        return ngx_signal_process(cycle, ngx_signal);
+    }
+
+    //ngx_signal_process实际调用ngx_os_signal_process
+```
+
+```c
+ngx_int_t ngx_os_signal_process(ngx_cycle_t *cycle, char *name, ngx_int_t pid) {
+    ngx_signal_t  *sig;
+
+    for (sig = signals; sig->signo != 0; sig++) {
+        if (ngx_strcmp(name, sig->name) == 0) {
+            if (kill(pid, sig->signo) != -1) { //实际是通过kill命令发送信号
+                return 0;
+            }
+            //出错记录日志
+            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                          "kill(%P, %d) failed", pid, sig->signo);
+        }
+    }
+
+    return 1;
+}
+
+```
+对于发送端的流程走的下面3个函数
+ngx_get_options
+ngx_signal_process
+ngx_os_signal_process
+
+现在分析stop, quit, reopen, reload命令实际使用了哪个信号
+答案在ngx_signal_t声明的signals表里
+``` c
+ngx_signal_t  signals[] = {
+    { ngx_signal_value(NGX_RECONFIGURE_SIGNAL),
+      "SIG" ngx_value(NGX_RECONFIGURE_SIGNAL),
+      "reload",
+      ngx_signal_handler },
+
+    { ngx_signal_value(NGX_REOPEN_SIGNAL),
+      "SIG" ngx_value(NGX_REOPEN_SIGNAL),
+      "reopen",
+      ngx_signal_handler },
+
+    { ngx_signal_value(NGX_TERMINATE_SIGNAL),
+      "SIG" ngx_value(NGX_TERMINATE_SIGNAL),
+      "stop",
+      ngx_signal_handler },
+
+    { ngx_signal_value(NGX_SHUTDOWN_SIGNAL),
+      "SIG" ngx_value(NGX_SHUTDOWN_SIGNAL),
+      "quit",
+      ngx_signal_handler },
+
+    { 0, NULL, "", NULL }
+};
+
+//ngx_signal_value的作用是宏替换是作字符拼接SIG和ngx_signal_value
+//如果ngx_signal_value(QUIT)，那么展开的值就是SIGQUIT
+#define NGX_RECONFIGURE_SIGNAL   HUP
+
+#if (NGX_LINUXTHREADS)
+#define NGX_REOPEN_SIGNAL        INFO
+#else
+#define NGX_REOPEN_SIGNAL        USR1
+#endif
+
+#define NGX_TERMINATE_SIGNAL     TERM
+#define NGX_SHUTDOWN_SIGNAL      QUIT
+
+//从上面的宏替换可以看出,左边是nginx命令,右边是信号名
+//reload-->SIGHUP
+//reopen-->SIGUSR1
+//stop  -->SIGTERM
+//quit  -->SIGQUIT
+
+```
