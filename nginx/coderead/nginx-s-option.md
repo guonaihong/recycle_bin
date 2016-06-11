@@ -3,7 +3,7 @@
 首先-h看下帮助信息
 sudo /usr/local/nginx/sbin/nginx -h
 
-从帮助信息中可以得知-s选项提供了stop, quit, reopen, reload几个命令
+从帮助信息中可以得知-s选项提供了stop, quit, reopen, reload几个命令  
 -s signal     : send signal to a master process: stop, quit, reopen, reload
 
 阅读过程:
@@ -65,7 +65,7 @@ static ngx_int_t ngx_get_options(int argc, char *const *argv) {
 // 跑完这个函数,只设置了两个变量ngx_signal和ngx_process
 ```
 
-只要找到ngx_signal表量就知道实际干活的函数
+只要找到ngx_signal变量就知道实际干活的函数
 ```c
     //如果ngx_signal有值，则调用ngx_signal_process
     if (ngx_signal) {
@@ -95,9 +95,11 @@ ngx_int_t ngx_os_signal_process(ngx_cycle_t *cycle, char *name, ngx_int_t pid) {
 
 ```
 对于发送端的流程走的下面3个函数
+```c
 ngx_get_options
 ngx_signal_process
 ngx_os_signal_process
+```
 
 现在分析stop, quit, reopen, reload命令实际使用了哪个信号
 答案在ngx_signal_t声明的signals表里
