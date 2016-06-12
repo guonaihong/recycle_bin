@@ -7,9 +7,9 @@ sudo /usr/local/nginx/sbin/nginx -h
 -s signal     : send signal to a master process: stop, quit, reopen, reload
 
 问题:  
-1. nginx stop, quit, reopen, reload命令实际使用的posix信号名是?
-1. nginx -s 选项如何知道该往哪个进程发信号, 是如何获取pid的?
-1. nginx 如何接收这些信号以及对应的处理?
+ 1. nginx stop, quit, reopen, reload命令实际使用的posix信号名是?
+ 1. nginx -s 选项如何知道该往哪个进程发信号, 是如何获取pid的?
+ 1. nginx 如何接收这些信号以及对应的处理?
 
 阅读过程:
 查找解析命令行的函数ngx_get_options中处理's'选项的代码
