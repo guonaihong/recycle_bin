@@ -6,6 +6,11 @@ sudo /usr/local/nginx/sbin/nginx -h
 从帮助信息中可以得知-s选项提供了stop, quit, reopen, reload几个命令  
 -s signal     : send signal to a master process: stop, quit, reopen, reload
 
+问题:  
+1. nginx stop, quit, reopen, reload命令实际使用的posix信号名是?
+1. nginx -s 选项如何知道该往哪个进程发信号, 是如何获取pid的?
+1. nginx 如何接收这些信号以及对应的处理?
+
 阅读过程:
 查找解析命令行的函数ngx_get_options中处理's'选项的代码
 ```c
@@ -146,5 +151,95 @@ ngx_signal_t  signals[] = {
 //reopen-->SIGUSR1
 //stop  -->SIGTERM
 //quit  -->SIGQUIT
+
+```
+
+nginx -s 选项如何知道该往哪个进程发信号, 是如何获取pid的?
+
+这个答案还要在ngx_signal_process函数里找, ngx_signal_process代码静下心里看,  
+总结为打开某个神秘的文件,然后获得了pid。然后用kill函数发送信号,下面是我去掉
+打印语句的ngx_signal_process函数
+``` c
+ngx_int_t ngx_signal_process(ngx_cycle_t *cycle, char *sig) {
+    ssize_t           n;
+    ngx_int_t         pid;
+    ngx_file_t        file;
+    ngx_core_conf_t  *ccf;
+    u_char            buf[NGX_INT64_LEN + 2];
+
+    //这个地方获取了神秘文件名,在本函数里要想知道这句话的意思比较难
+    //接下来看下cycle是怎么来的
+    ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
+
+    ngx_memzero(&file, sizeof(ngx_file_t));
+
+    file.name = ccf->pid;
+    file.log = cycle->log;
+                                                                                                   
+    //打开存放pid的文件
+    file.fd = ngx_open_file(file.name.data, NGX_FILE_RDONLY,
+                            NGX_FILE_OPEN, NGX_FILE_DEFAULT_ACCESS);
+                                                                                                   
+    if (file.fd == NGX_INVALID_FILE) {
+        return 1;
+    }
+                                                                                                   
+    n = ngx_read_file(&file, buf, NGX_INT64_LEN + 2, 0);//读取文件内容
+
+    if (ngx_close_file(file.fd) == NGX_FILE_ERROR) {//关闭文件
+    }
+
+    if (n == NGX_ERROR) {
+        return 1;
+    }
+                                                                                                   
+    while (n-- && (buf[n] == CR || buf[n] == LF)) { /* void */ }//跳过尾部的换行符
+                                                                                                   
+    pid = ngx_atoi(buf, ++n);//把字符串转成数字
+                                                                                                   
+    if (pid == NGX_ERROR) {
+        return 1;
+    }
+
+    return ngx_os_signal_process(cycle, sig, pid);
+}
+```
+只要知道ngx_signal_process第一个参数cycle是怎么样来的，就有可能知道神秘文件是怎么来的  
+ngx_get_conf(cycle->conf_ctx, ngx_core_module)展开就是cycle->conf_ctx[ngx_core_module.index]  
+
+通过搜索cycle知道该变量是由ngx_init_cycle函数初始化的,通过在ngx_init_cycle函数里面搜索conf_ctx  
+
+发现cycle->conf_ctx[ngx_core_module.index] 是如何赋值的,请看如下代码,最终发现  
+ngx_modules->ctx成员藏有钩子函数
+``` c
+ for (i = 0; ngx_modules[i]; i++) {
+        if (ngx_modules[i]->type != NGX_CORE_MODULE) {
+            continue;
+        }
+
+        module = ngx_modules[i]->ctx;//取出ctx成员
+
+        if (module->create_conf) {
+            rv = module->create_conf(cycle);//调用create_conf钩子函数
+            if (rv == NULL) {
+                ngx_destroy_pool(pool);
+                return NULL;
+            }
+            cycle->conf_ctx[ngx_modules[i]->index] = rv; //赋值
+        }
+    }
+
+```
+重新回到ngx_signal_process函数里ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);  
+打开ngx_core_module模块里的ctx成员搜索pid，最后定位到如下代码,最终迷题解开,打开的文件名是logs/nginx.pid  
+
+``` c
+#define NGX_PID_PATH  "logs/nginx.pid"
+static char *ngx_core_module_init_conf(ngx_cycle_t *cycle, void *conf) {
+
+    if (ccf->pid.len == 0) {
+        ngx_str_set(&ccf->pid, NGX_PID_PATH);
+    }
+}
 
 ```
