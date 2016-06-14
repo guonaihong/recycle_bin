@@ -243,3 +243,5 @@ static char *ngx_core_module_init_conf(ngx_cycle_t *cycle, void *conf) {
 }
 
 ```
+nginx如何接收这些信号
+答案在ngx_init_signals函数里面,每个信号都使用了sigaction函数注册了对应的处理函数(ngx_signal_handler)
