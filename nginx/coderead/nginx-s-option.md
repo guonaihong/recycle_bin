@@ -10,6 +10,9 @@ sudo /usr/local/nginx/sbin/nginx -h
  1. nginx stop, quit, reopen, reload命令实际使用的posix信号名是?
  1. nginx -s 选项如何知道该往哪个进程发信号, 是如何获取pid的?
  1. nginx 如何接收这些信号以及对应的处理?
+ 1. nginx 使用哪个函数接受信号的?
+ 1. nginx -s命令行参数的stop 与quit有什么区别?
+ 1. nginx -s命令行参数reopen与reload各做了哪些事?
 
 阅读过程:
 查找解析命令行的函数ngx_get_options中处理's'选项的代码
@@ -243,5 +246,25 @@ static char *ngx_core_module_init_conf(ngx_cycle_t *cycle, void *conf) {
 }
 
 ```
-nginx如何接收这些信号
+nginx如何接收这些信号?
+
 答案在ngx_init_signals函数里面,每个信号都使用了sigaction函数注册了对应的处理函数(ngx_signal_handler)
+在ngx_master_process_cycle函数中master进程首先屏蔽了一些信号,然后sigsuspend函数就可以接受信号
+worker process是继承了master的信号屏蔽的,所以信号的接受只在master进程里面
+
+ngx_signal_worker_processes // master process
+          |
+          |
+ngx_write_channel           // master process
+          |
+          |
+ngx_read_channel            // workder process
+          |
+          |
+ngx_channel_handler         // 设置 worker process的ngx_quit ngx_terminate ngx_reopen变量
+          |
+          |
+ngx_worker_process_cycle    // worker process 检查gx_quit ngx_terminate ngx_reopen的变量
+
+nginx -s命令行参数的stop 与quit有什么区别?
+stop命令的直接exit子进程quit命令会等待没有消息时才会退出
