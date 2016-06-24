@@ -105,11 +105,15 @@ ngx_int_t ngx_os_signal_process(ngx_cycle_t *cycle, char *name, ngx_int_t pid) {
 对于发送端的流程走的下面3个函数
 ```c
 ngx_get_options
+          |
+          |
 ngx_signal_process
+          |
+          |
 ngx_os_signal_process
 ```
 
-现在分析stop, quit, reopen, reload命令实际使用了哪个信号
+现在分析stop, quit, reopen, reload命令实际使用了哪个信号?  
 答案在ngx_signal_t声明的signals表里
 ``` c
 ngx_signal_t  signals[] = {
@@ -246,12 +250,11 @@ static char *ngx_core_module_init_conf(ngx_cycle_t *cycle, void *conf) {
 }
 
 ```
-nginx如何接收这些信号?
+nginx 使用哪个函数接受信号的?
 
-答案在ngx_init_signals函数里面,每个信号都使用了sigaction函数注册了对应的处理函数(ngx_signal_handler)
-在ngx_master_process_cycle函数中master进程首先屏蔽了一些信号,然后sigsuspend函数就可以接受信号
-worker process是继承了master的信号屏蔽的,所以信号的接受只在master进程里面
-
+答案在ngx_init_signals函数里面,每个信号都使用了sigaction函数注册了对应的处理函数(ngx_signal_handler)  
+在ngx_master_process_cycle函数中master进程首先屏蔽了一些信号,然后sigsuspend函数就可以接受信号  
+```c
 ngx_signal_worker_processes // master process
           |
           |
@@ -264,7 +267,7 @@ ngx_read_channel            // workder process
 ngx_channel_handler         // 设置 worker process的ngx_quit ngx_terminate ngx_reopen变量
           |
           |
-ngx_worker_process_cycle    // worker process 检查gx_quit ngx_terminate ngx_reopen的变量
-
-nginx -s命令行参数的stop 与quit有什么区别?
-stop命令的直接exit子进程quit命令会等待没有消息时才会退出
+ngx_worker_process_cycle    // worker process 检查ngx_quit ngx_terminate ngx_reopen的变量
+```
+nginx -s命令行参数的stop 与quit有什么区别?  
+stop命令的直接exit子进程,quit命令会等待没有消息时才会退出  
