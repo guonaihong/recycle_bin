@@ -279,4 +279,4 @@ nginx -s reload就是重启工作进程，退出旧的工作进程(当没有请�
 先发送SIGHUP信号到master 进程,然后设置老的工作进程的ngx_quit,发现没有新的请求时退出.  
 
 nginx -s命令行参数reopen干啥了?  
-重新加载配置文件
+重新打开日志文件,比如error.log access.log
