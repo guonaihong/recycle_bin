@@ -12,7 +12,8 @@ sudo /usr/local/nginx/sbin/nginx -h
  1. nginx 如何接收这些信号以及对应的处理?
  1. nginx 使用哪个函数接受信号的?
  1. nginx -s命令行参数的stop 与quit有什么区别?
- 1. nginx -s命令行参数reopen与reload各做了哪些事?
+ 1. nginx -s命令行参数reload具体行为?  
+ 1. nginx -s命令行参数reopen干啥了?  
 
 阅读过程:
 查找解析命令行的函数ngx_get_options中处理's'选项的代码
@@ -271,3 +272,11 @@ ngx_worker_process_cycle    // worker process 检查ngx_quit ngx_terminate ngx_r
 ```
 nginx -s命令行参数的stop 与quit有什么区别?  
 stop命令的直接exit子进程,quit命令会等待没有消息时才会退出  
+
+nginx -s命令行参数reload具体行为?  
+
+nginx -s reload就是重启工作进程，退出旧的工作进程(当没有请求时正真退出)，fork新的工作进程干活.  
+先发送SIGHUP信号到master 进程,然后设置老的工作进程的ngx_quit,发现没有新的请求时退出.  
+
+nginx -s命令行参数reopen干啥了?  
+重新加载配置文件
