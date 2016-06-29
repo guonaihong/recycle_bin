@@ -94,3 +94,84 @@ jq '.[-2]'
 #输出
 "d"
 ```
+
+######查询对象的所有值.[]
+可以使用.[]语法,查询json对象的所有值
+
+```shell
+#拿到key的val以及key2的val2
+echo '{"key":"val", "key2":"val2"}'|jq '.[]'
+#输出
+"val"
+"val2"
+
+#拿到key的val(一个object),key2的val
+echo '{"key":{"key3":"val3", "key4":"val4"}, "key2":"val2"}'|jq '.[]'
+#输出
+{
+  "key3": "val3",
+  "key4": "val4"
+}
+"val2"
+
+#拿到json数组里面的值
+echo ' [{"name":"JSON", "good":true}, {"name":"XML", "good":false}]'|jq '.[]'
+#输出
+{
+  "name": "JSON",
+  "good": true
+}
+{
+  "name": "XML",
+  "good": false
+}
+```
+
+######多条件使用,分开
+如果要写多个过滤条件使用,号,现输出,左边的结果在输出,右边的结果  
+```shell
+echo '{"foo": 42, "bar": "something else", "baz": true}'|jq '.foo,.bar,.baz'
+#输出
+42
+"something else"
+true
+
+#.key和[]表达式可以组合使用
+echo '{"user":"stedolan", "projects": ["jq", "wikiflow"]}'|jq '.user,.projects[]'
+#输出
+"stedolan"
+"jq"
+"wikiflow"
+
+#可以使用,一次查询数组里的多个元素
+echo '["a","b","c","d","e"]'|jq '.[4,3]'
+#输出
+"e"
+"d"
+```
+
+######管道符号|
+shell里面的|是连接各个shell命令的通道,像大管道套小管道,过滤器就是命令,可以很方便的过滤出想要的数据来  
+jq里面也有|符号  
+```shell
+#可以先用.[]拿到值,再使用|(管道)拿到name
+echo '[{"name":"JSON", "good":true}, {"name":"XML", "good":false}]'|jq '.[] | .name'
+#输出
+"JSON"
+"XML"
+
+######把查询结果包装成一个数组(array)--使用[]符号
+[]在jq里面表示数组,可以现查询再使用[]把查询结果包装成数组
+echo '[{"name":"JSON", "good":true}, {"name":"XML", "good":false}]'|jq '[.[]|.name]'
+#输出
+[
+  "JSON",
+  "XML"
+]
+
+```
+
+######把查询结果包装成一个对象(object)--使用{}符号
+
+```shell
+```
