@@ -174,4 +174,161 @@ echo '[{"name":"JSON", "good":true}, {"name":"XML", "good":false}]'|jq '[.[]|.na
 ######把查询结果包装成一个对象(object)--使用{}符号
 
 ```shell
+#修改json的key名
+echo '{"user":"stedolan","titles":["JQ Primer", "More JQ"]}'|jq '{user1: .user, title2: .titles}'
+#输出
+{
+  "user1": "stedolan",
+  "title2": [
+    "JQ Primer",
+    "More JQ"
+  ]
+}
+
+#如果其中一个表达式产生多个结果,那最终生成的json也有多个结果
+#其中.titles[]会查询出两个结果,那最终生成的json也是两个
+echo '{"user":"stedolan","titles":["JQ Primer", "More JQ"]}'|jq '{user, titles:.titles[]}'
+#输出
+{
+  "user": "stedolan",
+  "titles": "JQ Primer"
+}
+{
+  "user": "stedolan",
+  "titles": "More JQ"
+}
+
+#如果想使用原来的json某个key的值作新的json的key,可以使用(.key)语法
+echo '{"user":"stedolan","titles":["JQ Primer", "More JQ"]}'| jq '{(.user): .titles}'
+#输出
+{
+  "stedolan": [
+    "JQ Primer",
+    "More JQ"
+  ]
+}
+```
+
+#####运算符
+jq的运算符会根据参数(数字,数组,字符串)的不同,有不同的形为,jq不会做隐式类型转换,如果把string添加到一个object   
+就会报错  
+
+######加法+运算符
++运算符需要两个相同输入,并把结果加在一起  
+ * 数字常规的加法
+ * array拼接成一个大的数组
+ * string拼接成一个大的string
+ * object也是合并操作,如果有两个key相同的object新的覆盖旧的
+
+null可以与任何值相加,返回另外一个值  
+#数字相加
+```shell
+echo '{"a":1}'|jq '.a + 1'
+#输出
+2
+
+#array相加
+echo '{"a": [1,2], "b": [3,4]}'|jq '.a+.b'
+#输出
+[
+  1,
+  2,
+  3,
+  4
+]
+
+#string相加
+echo '{"a": "hello", "b": "world"}'|jq '.a+.b'
+#输出
+"helloworld"
+
+#object相加
+echo null|jq '{a: 42} + {b: 2} + {c: 3} + {a: 1}'
+#输出
+{
+  "a": 1,
+  "b": 2,
+  "c": 3
+}
+
+#有空值相加的情况
+echo '{"a": 1}'|jq 'null +.a'
+#输出
+1
+
+echo '{}'|jq '.a+1'
+#输出
+1
+```
+
+######减法-运算符
+-号运算符用于数字,用于数组,会在第一个数组删除第二个数组中出现的所有项  
+```shell
+#数字相减
+echo '{"a":4}'|jq '4 - .a'
+#输出
+0
+
+#数组相减
+echo '  ["xml", "yaml", "json"]' |jq '. - ["xml", "json"]'
+#输出
+[
+  "yaml"
+]
+```
+
+######乘法*除法运算符
+* /只能用在数字类型上  
+```shell
+echo 5|jq '10 / . * 3'
+#输出
+6
+```
+
+######length
+length用于不同类型值的长度  
+ * string:返回字符串中字符的个数,如果有中文返回中文的个数
+ * array: 返回数组元素的个数
+ * object: 返回键-值对的个数
+
+```shell
+echo '["郭", [1,2], "string", {"a":2}, null]'| jq '.[]|length'
+#输出
+1
+2
+6
+1
+0
+```
+
+######keys and keys_unsorted
+keys可以返回json键名数组,其中keys与keys_unsorted区别是keys返回的数组是排过序的  
+keys_unsorted返回的数组是不排序  
+当json的顶层元素是数组时,keys返回数组的下标
+
+```shell
+echo '{"abc": 1, "abcd": 2, "Foo": 3}'|jq 'keys'
+#输出
+[
+  "Foo",
+  "abc",
+  "abcd"
+]
+
+echo '{"abc": 1, "abcd": 2, "Foo": 3}'|jq 'keys_unsorted'
+#输出
+[
+  "abc",
+  "abcd",
+  "Foo"
+]
+
+echo '["aaa", "bbb", "ccc"]'|jq 'keys'
+#输出
+[
+  0,
+  1,
+  2
+]
+
 ```
