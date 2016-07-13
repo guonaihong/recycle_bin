@@ -7,6 +7,7 @@ uniq命令消除重复的行.主要与sort命令结合使用
     #输出
     3
     ```
+    
  1. 仅显示唯一的行
     ```shell
     echo -e "1\n2\n3\n4\n3\n"|sort|uniq -u
@@ -15,6 +16,7 @@ uniq命令消除重复的行.主要与sort命令结合使用
     2
     4
     ```
+    
  1. 重复的行只打印一次
     ```shell
     echo -e "1\n2\n3\n4\n3\n"|sort|uniq
@@ -24,6 +26,7 @@ uniq命令消除重复的行.主要与sort命令结合使用
     3
     4
     ```
+    
  1. 找出每行中出现的次数
     ```shell
     echo -e "1\n2\n3\n4\n3\n"|sort|uniq -c
