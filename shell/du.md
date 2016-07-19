@@ -23,6 +23,7 @@ du主要统计某个文件或者目录所占磁盘空间大小
  * 找出当前目录里最大最大的10个文件
     ```shell
     find . -type f -exec du {} \;|sort -nrk1|head
+    
     688 ./mini_ant/.git/objects/pack/pack-0ac94dfdcb944a62a7b5e5dd1bbd4b3348eb6c4e.pack
     144 ./.git/objects/pack/pack-1aa7de3619de7b9c88323170359198f94723c1df.pack
     48  ./.git/index
@@ -33,4 +34,4 @@ du主要统计某个文件或者目录所占磁盘空间大小
     24  ./shell/jq.md
     24  ./shell/.sort.md.swp
     24  ./shell/.du.md.swp
-    ```shell
+    ```
