@@ -69,7 +69,7 @@ func parse(s []byte) {
 			}
 
 		space:
-			if v == ' ' {
+			if v == ' ' || v == '+' {
 
 				if token.Len() > 0 {
 					//fmt.Printf("token(%s)\n", token.Bytes())
@@ -138,8 +138,9 @@ func main() {
 		//"./error.log $http_code != 200",
 		"$parent_url + /eval/mp3",
 		"http:// + $base_url + /eval/mp3",
-		//"$parent_url + /eval/mp3",
-		//"http:// + $base_url + /eval/mp3",
+		"$parent_url+/eval/mp3",
+		"$parent_url+ /eval/mp3",
+		"http:// + $base_url + /eval/mp3",
 	}
 
 	for _, v := range ss {
