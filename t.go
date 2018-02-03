@@ -3,12 +3,14 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/satori/go.uuid"
 	"strings"
 )
 
 const (
 	variable = "var"
 	constant = "const"
+	FUNCVAL  = "func"
 )
 
 type Val struct {
@@ -16,10 +18,126 @@ type Val struct {
 	v    interface{}
 }
 
-var valMap map[string]string
+type FuncVal struct {
+	FuncName string
+	CallArgs []string
+	RvArgs   Val
 
-func parse(s []byte) {
-	pos := bytes.Index(s, []byte("$"))
+	PrevFuncVal *FuncVal
+	NextFuncVal *FuncVal
+}
+
+var valMap map[string]string
+var funcMap map[string]func(v *FuncVal) error
+
+func init() {
+	valMap = make(map[string]string, 10)
+	valMap["parent_url"] = "http://127.0.0.1"
+	valMap["base_url"] = "127.0.0.1"
+	valMap["http_body"] = `{"A":"B"}`
+
+	funcMap = make(map[string]func(v *FuncVal) error, 10)
+
+	funcMap["uuid"] = GenUUID
+}
+
+func lookFunc(funcName string) bool {
+	_, ok := funcMap[funcName]
+	return ok
+}
+
+func callFunc(val *FuncVal) (*Val, bool) {
+	cb, ok := funcMap[val.FuncName]
+	if !ok {
+		return nil, ok
+	}
+
+	err := cb(val)
+	if err != nil {
+		return nil, false
+	}
+
+	return &val.RvArgs, true
+}
+
+func findVal(s string) (string, bool) {
+	v, ok := valMap[s]
+	return v, ok
+}
+
+func GenUUID(v *FuncVal) error {
+	u1 := uuid.Must(uuid.NewV4())
+	v.RvArgs = Val{Type: variable, v: u1.String()}
+
+	return nil
+}
+
+func parseFunc(s string, i *int) *FuncVal {
+
+	j := *i
+	start := j
+
+	funcName := ""
+	arg := ""
+	var val *FuncVal
+
+	for j < len(s) {
+		if funcName == "" {
+
+			if s[j] == ' ' || s[j] == '(' {
+
+				funcName = strings.TrimSpace(s[start:j])
+
+				ok := lookFunc(funcName)
+				if !ok {
+					panic("not find function " + funcName + "()")
+				}
+
+				val = &FuncVal{FuncName: funcName}
+
+				if s[j] == '(' {
+					j++
+					start = j
+				}
+				goto args
+			}
+
+			goto next
+		}
+
+	args:
+		if s[j] == ' ' {
+			goto next
+		}
+
+		if s[j] == '(' {
+			goto next
+		}
+
+		if s[j] == ',' {
+			arg = strings.TrimSpace(s[start:j])
+			j++
+			start = j
+		}
+
+		if s[j] == ')' {
+			arg = strings.TrimSpace(s[start:j])
+			if len(arg) > 0 {
+				val.CallArgs = append(val.CallArgs, arg)
+			}
+
+			*i = j
+
+			return val
+		}
+	next:
+		j++
+	}
+
+	return nil
+}
+
+func Parse(s []byte) []byte {
 
 	var token bytes.Buffer
 
@@ -27,92 +145,120 @@ func parse(s []byte) {
 
 	var out bytes.Buffer
 
-	if pos != -1 {
+	pos := bytes.Index(s, []byte("$"))
 
-		findVal := false
-		for i := 0; i < len(s); {
+	if pos == -1 {
+		return s
+	}
 
-			v := s[i]
-			if v == '$' {
-				if token.Len() > 0 {
-					vals = append(vals, Val{Type: constant, v: token.String()})
-				}
-				findVal = true
-			}
+	isVariable := false
+	isFunc := false
 
-			if findVal {
+	for i := 0; i < len(s); {
 
-				vv, ok := valMap[token.String()]
-				if !ok {
-					if v == '$' {
-						goto next
-					}
+		v := s[i]
+		if v == '$' {
 
-					if v == ' ' || v == '+' {
-						fmt.Printf("not found $%s\n", token.String())
-						goto space
-					}
-
-					token.WriteByte(v)
-
-					goto next
-				}
-
-				//fmt.Printf("find val:%s\n", token.String())
-				if len(vals) > 0 && vals[len(vals)-1].Type == "+" {
-					vals = vals[:len(vals)-1]
-				}
-
-				findVal = false
-				vals = append(vals, Val{Type: variable, v: vv})
+			if token.Len() > 0 {
+				vals = append(vals, Val{Type: constant, v: token.String()})
 				token.Reset()
 			}
 
-		space:
-			if v == ' ' || v == '+' {
+			if i+1 < len(s) && s[i+1] == '$' {
+				i += 2 //skip $$
+				isFunc = true
 
-				if token.Len() > 0 {
-					//fmt.Printf("token(%s)\n", token.Bytes())
-					vals = append(vals, Val{Type: constant, v: token.String()})
-					token.Reset()
+				goto callFunc
+			}
+
+			isVariable = true
+		}
+
+	callFunc:
+		if isFunc {
+			funcVal := parseFunc(string(s), &i)
+			v, ok := callFunc(funcVal)
+			if !ok {
+				panic("call func " + funcVal.FuncName)
+			}
+
+			vals = append(vals, *v)
+			isFunc = false
+			goto next
+		}
+
+		if isVariable {
+
+			vv, ok := findVal(token.String())
+			if !ok {
+				if v == '$' {
+					goto next
 				}
 
-				j := i
-				for ; j < len(s); j++ {
-
-					if s[j] == '+' {
-						continue
-					}
-
-					if s[j] != ' ' {
-						break
-					}
-
+				if v == ' ' || v == '+' {
+					fmt.Printf("not found $%s\n", token.String())
+					goto space
 				}
 
-				if strings.TrimSpace(string(s[i:j])) == "+" {
-					i = j
-					v = s[i]
-					if !(len(vals) > 0 && vals[len(vals)-1].Type == variable) {
-						vals = append(vals, Val{Type: "+", v: token.String()})
-					}
+				token.WriteByte(v)
+
+				goto next
+			}
+
+			if len(vals) > 0 && vals[len(vals)-1].Type == "+" {
+				vals = vals[:len(vals)-1]
+			}
+
+			isVariable = false
+			vals = append(vals, Val{Type: variable, v: vv})
+			token.Reset()
+		}
+
+	space:
+		if v == ' ' || v == '+' {
+
+			if token.Len() > 0 {
+				//fmt.Printf("token(%s)\n", token.Bytes())
+				vals = append(vals, Val{Type: constant, v: token.String()})
+				token.Reset()
+			}
+
+			j := i
+			for ; j < len(s); j++ {
+
+				if s[j] == '+' {
+					continue
 				}
 
-				if s[i] == '$' {
-					goto now
+				if s[j] != ' ' {
+					break
 				}
-				findVal = false
 
 			}
 
-			token.WriteByte(v)
+			if strings.TrimSpace(string(s[i:j])) == "+" {
+				if !(len(vals) > 0 && vals[len(vals)-1].Type == variable) {
+					vals = append(vals, Val{Type: "+", v: string(s[i:j])})
+				}
+				i = j
+				v = s[i]
+			}
 
-		next:
-			i++
-		now:
+			if s[i] == '$' {
+				goto now
+			}
+			isVariable = false
+
 		}
+
+		token.WriteByte(v)
+
+	next:
+		i++
+	now:
 	}
 
+	//fmt.Printf("--->%s\n", token.String())
 	if token.Len() > 0 {
 		vals = append(vals, Val{Type: constant, v: token.String()})
 	}
@@ -124,26 +270,25 @@ func parse(s []byte) {
 	}
 
 	fmt.Printf("%s\n", out.String())
+
+	return out.Bytes()
 }
 
 func main() {
 
-	valMap = make(map[string]string, 10)
-	valMap["parent_url"] = "http://127.0.0.1"
-	valMap["base_url"] = "127.0.0.1"
-	valMap["http_body"] = `{"A":"B"}`
-
 	ss := []string{
-		//"<$$uuid()> $http_body",
 		//"./error.log $http_code != 200",
 		"$parent_url + /eval/mp3",
 		"http:// + $base_url + /eval/mp3",
 		"$parent_url+/eval/mp3",
 		"$parent_url+ /eval/mp3",
 		"http:// + $base_url + /eval/mp3",
+		"session-id:$$uuid()+:sh",
+		"$$uuid()-area+bb",
+		//"<$$uuid()> $http_body",
 	}
 
 	for _, v := range ss {
-		parse([]byte(v))
+		Parse([]byte(v))
 	}
 }
