@@ -12,11 +12,13 @@ const bufSize = 4
 
 func ReadFromTail(rs io.ReadSeeker, wr io.Writer, sep []byte) {
 
-	total, _ := rs.Seek(0, 2)
+	tail, _ := rs.Seek(0, 2)
+	head := tail
 	buf := make([]byte, bufSize+len(sep))
 
-	for total > 0 {
-		minRead := total
+	for tail > 0 {
+
+		minRead := tail
 		if minRead > bufSize {
 			minRead = bufSize
 		}
@@ -31,24 +33,26 @@ func ReadFromTail(rs io.ReadSeeker, wr io.Writer, sep []byte) {
 			break
 		}
 
+		head -= minRead
 		rs.Seek(-minRead, 1)
 
 		for {
-			// if not found, continue backtracking
-			// todo
-			r := bytes.LastIndex(buf, sep)
+			pos := bytes.LastIndex(buf, sep)
 			w := len(buf)
 
-			if r == -1 {
-				wr.Write(buf[0:w])
-				//break
+			if pos == -1 {
+				break
 			}
 
-			if r > 0 {
+			if pos == 0 {
+				//todo
+			}
+
+			if pos > 0 {
 				fmt.Printf("buf = %s\n", buf)
-				wr.Write(buf[r+len(sep) : w])
-				w = r - 1
-				if r == len(sep) {
+				wr.Write(buf[pos+len(sep) : w])
+				w = pos - 1
+				if pos == len(sep) {
 					break
 				}
 
@@ -56,13 +60,13 @@ func ReadFromTail(rs io.ReadSeeker, wr io.Writer, sep []byte) {
 			}
 
 			if w > 0 {
-				r := bufSize
-				if total < bufSize {
-					r = int(total)
+				pos := bufSize
+				if tail < bufSize {
+					pos = int(tail)
 				}
 
-				copy(buf[r:], buf[:w])
-				total -= int64(w)
+				copy(buf[pos:], buf[:w])
+				tail -= int64(w)
 				break
 			}
 		}
